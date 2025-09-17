@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Pack Analyzer</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: #191919;
+            color: #e9e9e7;
+            margin: 0;
+            padding: 16px;
+            line-height: 1.4;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #2f3437;
+            border-radius: 8px;
+            border: 1px solid #37352f;
+            overflow: hidden;
+        }
+        
+        .header {
+            padding: 16px 20px;
+            background: #37352f;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .add-btn {
+            background: #0061cc;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .add-btn:hover {
+            background: #004499;
+        }
+        
+        .section {
+            padding: 20px;
+            border-bottom: 1px solid #37352f;
+        }
+        
+        .section:last-child {
+            border-bottom: none;
+        }
+        
+        .pack {
+            background: #37352f;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 16px;
+            position: relative;
+        }
+        
+        .pack-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .remove-btn {
+            background: none;
+            border: none;
+            color: #e03e3e;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .inputs {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .input-box {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .input-box label {
+            font-size: 11px;
+            color: #9b9a97;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        
+        .input-box input {
+            padding: 8px;
+            background: #2f3437;
+            border: 1px solid #37352f;
+            border-radius: 4px;
+            color: #e9e9e7;
+            font-size: 12px;
+        }
+        
+        .input-box input:focus {
+            outline: none;
+            border-color: #0061cc;
+        }
+        
+        .name-input {
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+            width: 200px;
+        }
+        
+        .name-input:focus {
+            outline: 1px solid #0061cc;
+            border-radius: 2px;
+            padding: 2px 4px;
+        }
+        
+        .results {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #2f3437;
+        }
+        
+        .result {
+            text-align: center;
+        }
+        
+        .result-label {
+            font-size: 10px;
+            color: #9b9a97;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        
+        .result-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-top: 4px;
+        }
+        
+        .analyze-btn {
+            background: #0f7b6c;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        .analyze-btn:hover {
+            background: #0d6559;
+        }
+        
+        .comparison {
+            display: none;
+        }
+        
+        .comparison.show {
+            display: block;
+        }
+        
+        .ranking {
+            background: #37352f;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .ranking h4 {
+            margin: 0 0 12px 0;
+            color: #ffffff;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .ranking-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            font-size: 12px;
+        }
+        
+        .ranking-item:first-child { color: #0f7b6c; font-weight: 600; }
+        .ranking-item:nth-child(2) { color: #d97706; font-weight: 500; }
+        .ranking-item:nth-child(3) { color: #6b7280; font-weight: 400; }
+        
+        .insights {
+            background: #37352f;
+            border-radius: 6px;
+            padding: 16px;
+        }
+        
+        .insights h4 {
+            margin: 0 0 12px 0;
+            color: #ffffff;
+            font-size: 13px;
+        }
+        
+        .insight {
+            font-size: 12px;
+            color: #e9e9e7;
+            margin-bottom: 8px;
+            padding-left: 12px;
+            border-left: 3px solid #9b9a97;
+            line-height: 1.4;
+        }
+        
+        .insight.success { border-left-color: #0f7b6c; }
+        .insight.warning { border-left-color: #d9730d; }
+        .insight.info { border-left-color: #0061cc; }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <span style="color: #9b9a97; font-size: 12px;">Pack Performance Analyzer</span>
+            <button class="add-btn" onclick="addPack()">+ Add Pack</button>
+        </div>
+        
+        <div class="section" id="packs-section">
+            <div class="pack" id="pack-1">
+                <div class="pack-header">
+                    <input type="text" class="name-input" id="name1" placeholder="Pack 1 Name">
+                    <span style="display: none;"></span>
+                </div>
+                <div class="inputs">
+                    <div class="input-box">
+                        <label>Unique Users</label>
+                        <input type="number" id="users1" onchange="calc(1)">
+                    </div>
+                    <div class="input-box">
+                        <label>Unique Projects</label>
+                        <input type="number" id="projects1" onchange="calc(1)">
+                    </div>
+                    <div class="input-box">
+                        <label>Total App Users</label>
+                        <input type="number" id="total1" onchange="calc(1)">
+                    </div>
+                    <div class="input-box">
+                        <label>Banner Clicks</label>
+                        <input type="number" id="banner1" onchange="calc(1)">
+                    </div>
+                </div>
+                <div class="results">
+                    <div class="result">
+                        <div class="result-label">% All Users Used Pack</div>
+                        <div class="result-value" id="usage1">-</div>
+                    </div>
+                    <div class="result">
+                        <div class="result-label">% Users via Banner</div>
+                        <div class="result-value" id="bannerPct1">-</div>
+                    </div>
+                    <div class="result">
+                        <div class="result-label">Projects per User</div>
+                        <div class="result-value" id="ppu1">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section hidden" id="compare-section">
+            <button class="analyze-btn" onclick="analyze()">Compare All Packs</button>
+        </div>
+        
+        <div class="section comparison" id="comparison">
+            <div id="rankings"></div>
+            <div class="insights" id="insights">
+                <h4>Key Insights</h4>
+                <div id="insightsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var packCount = 1;
+        
+        function addPack() {
+            packCount++;
+            
+            var packsSection = document.getElementById('packs-section');
+            var newPack = document.createElement('div');
+            newPack.className = 'pack';
+            newPack.id = 'pack-' + packCount;
+            
+            newPack.innerHTML = 
+                '<div class="pack-header">' +
+                    '<input type="text" class="name-input" id="name' + packCount + '" placeholder="Pack ' + packCount + ' Name">' +
+                    '<button class="remove-btn" onclick="removePack(' + packCount + ')">×</button>' +
+                '</div>' +
+                '<div class="inputs">' +
+                    '<div class="input-box">' +
+                        '<label>Unique Users</label>' +
+                        '<input type="number" id="users' + packCount + '" onchange="calc(' + packCount + ')">' +
+                    '</div>' +
+                    '<div class="input-box">' +
+                        '<label>Unique Projects</label>' +
+                        '<input type="number" id="projects' + packCount + '" onchange="calc(' + packCount + ')">' +
+                    '</div>' +
+                    '<div class="input-box">' +
+                        '<label>Total App Users</label>' +
+                        '<input type="number" id="total' + packCount + '" onchange="calc(' + packCount + ')">' +
+                    '</div>' +
+                    '<div class="input-box">' +
+                        '<label>Banner Clicks</label>' +
+                        '<input type="number" id="banner' + packCount + '" onchange="calc(' + packCount + ')">' +
+                    '</div>' +
+                '</div>' +
+                '<div class="results">' +
+                    '<div class="result">' +
+                        '<div class="result-label">% All Users Used Pack</div>' +
+                        '<div class="result-value" id="usage' + packCount + '">-</div>' +
+                    '</div>' +
+                    '<div class="result">' +
+                        '<div class="result-label">% Users via Banner</div>' +
+                        '<div class="result-value" id="bannerPct' + packCount + '">-</div>' +
+                    '</div>' +
+                    '<div class="result">' +
+                        '<div class="result-label">Projects per User</div>' +
+                        '<div class="result-value" id="ppu' + packCount + '">-</div>' +
+                    '</div>' +
+                '</div>';
+            
+            packsSection.appendChild(newPack);
+            updateCompareButton();
+        }
+        
+        function removePack(packNum) {
+            var packElement = document.getElementById('pack-' + packNum);
+            if (packElement) {
+                packElement.remove();
+            }
+            updateCompareButton();
+        }
+        
+        function updateCompareButton() {
+            var packs = document.querySelectorAll('.pack');
+            var compareSection = document.getElementById('compare-section');
+            
+            if (packs.length > 1) {
+                compareSection.classList.remove('hidden');
+            } else {
+                compareSection.classList.add('hidden');
+                document.getElementById('comparison').className = 'comparison';
+            }
+        }
+        
+        function calc(packNum) {
+            var users = parseInt(document.getElementById('users' + packNum).value) || 0;
+            var projects = parseInt(document.getElementById('projects' + packNum).value) || 0;
+            var total = parseInt(document.getElementById('total' + packNum).value) || 0;
+            var banner = parseInt(document.getElementById('banner' + packNum).value) || 0;
+            
+            var usage = total > 0 ? ((users / total) * 100).toFixed(2) : 0;
+            var bannerPct = users > 0 ? ((banner / users) * 100).toFixed(1) : 0;
+            var ppu = users > 0 ? (projects / users).toFixed(2) : 0;
+            
+            document.getElementById('usage' + packNum).textContent = usage + '%';
+            document.getElementById('bannerPct' + packNum).textContent = bannerPct + '%';
+            document.getElementById('ppu' + packNum).textContent = ppu;
+        }
+        
+        function analyze() {
+            var packs = [];
+            var allPacks = document.querySelectorAll('.pack');
+            
+            for (var i = 0; i < allPacks.length; i++) {
+                var packId = allPacks[i].id.replace('pack-', '');
+                var users = parseInt(document.getElementById('users' + packId).value) || 0;
+                var projects = parseInt(document.getElementById('projects' + packId).value) || 0;
+                var total = parseInt(document.getElementById('total' + packId).value) || 0;
+                var banner = parseInt(document.getElementById('banner' + packId).value) || 0;
+                var name = document.getElementById('name' + packId).value || 'Pack ' + packId;
+                
+                if (users > 0) {
+                    var usage = total > 0 ? (users / total) * 100 : 0;
+                    var bannerPct = users > 0 ? (banner / users) * 100 : 0;
+                    var ppu = projects / users;
+                    
+                    packs.push({
+                        name: name,
+                        usage: usage,
+                        bannerPct: bannerPct,
+                        ppu: ppu
+                    });
+                }
+            }
+            
+            if (packs.length < 2) {
+                alert('Please enter data for at least 2 packs to compare');
+                return;
+            }
+            
+            showComparison(packs);
+        }
+        
+        function showComparison(packs) {
+            var usageSort = packs.slice().sort(function(a, b) { return b.usage - a.usage; });
+            var ppuSort = packs.slice().sort(function(a, b) { return b.ppu - a.ppu; });
+            var bannerSort = packs.slice().sort(function(a, b) { return b.bannerPct - a.bannerPct; });
+            
+            var rankingsHtml = '<div class="ranking"><h4>% All Users Used Pack</h4>';
+            for (var i = 0; i < Math.min(3, usageSort.length); i++) {
+                rankingsHtml += '<div class="ranking-item"><span>' + usageSort[i].name + '</span><span>' + usageSort[i].usage.toFixed(2) + '%</span></div>';
+            }
+            rankingsHtml += '</div>';
+            
+            rankingsHtml += '<div class="ranking"><h4>Projects per User</h4>';
+            for (var i = 0; i < Math.min(3, ppuSort.length); i++) {
+                rankingsHtml += '<div class="ranking-item"><span>' + ppuSort[i].name + '</span><span>' + ppuSort[i].ppu.toFixed(2) + '</span></div>';
+            }
+            rankingsHtml += '</div>';
+            
+            rankingsHtml += '<div class="ranking"><h4>% Users via Banner</h4>';
+            for (var i = 0; i < Math.min(3, bannerSort.length); i++) {
+                rankingsHtml += '<div class="ranking-item"><span>' + bannerSort[i].name + '</span><span>' + bannerSort[i].bannerPct.toFixed(1) + '%</span></div>';
+            }
+            rankingsHtml += '</div>';
+            
+            document.getElementById('rankings').innerHTML = rankingsHtml;
+            
+            var insights = [];
+            
+            insights.push('success|' + usageSort[0].name + ' leads adoption with ' + usageSort[0].usage.toFixed(2) + '% of all users');
+            
+            if (usageSort[0].name !== ppuSort[0].name) {
+                insights.push('info|' + ppuSort[0].name + ' has highest engagement (' + ppuSort[0].ppu.toFixed(2) + ' projects/user) but lower adoption than ' + usageSort[0].name);
+            }
+            
+            if (bannerSort[0].bannerPct > 50) {
+                insights.push('success|' + bannerSort[0].name + ' has excellent banner discovery (' + bannerSort[0].bannerPct.toFixed(1) + '% via banner)');
+            }
+            
+            var gap = usageSort[0].usage - usageSort[usageSort.length - 1].usage;
+            if (gap > 1) {
+                insights.push('warning|' + gap.toFixed(2) + '% adoption gap between best and worst packs indicates optimization opportunity');
+            }
+            
+            var bannerGap = bannerSort[0].bannerPct - bannerSort[bannerSort.length - 1].bannerPct;
+            if (bannerGap > 30) {
+                insights.push('info|Banner performance varies significantly (' + bannerGap.toFixed(1) + '% range) - apply best practices from top performers');
+            }
+            
+            var insightsHtml = '';
+            for (var i = 0; i < insights.length; i++) {
+                var parts = insights[i].split('|');
+                insightsHtml += '<div class="insight ' + parts[0] + '">' + parts[1] + '</div>';
+            }
+            
+            document.getElementById('insightsList').innerHTML = insightsHtml;
+            document.getElementById('comparison').className = 'comparison show';
+        }
+    </script>
+</body>
+</html>
