@@ -2,7 +2,8 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Pack Analyzer</title>
+    <title>Pack Performance Analyzer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
@@ -14,7 +15,7 @@
         }
         
         .container {
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
             background: #2f3437;
             border-radius: 8px;
@@ -25,24 +26,76 @@
         .header {
             padding: 16px 20px;
             background: #37352f;
+            border-bottom: 1px solid #37352f;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
         
-        .add-btn {
-            background: #0061cc;
-            color: white;
-            border: none;
-            padding: 8px 16px;
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #ffffff;
+            margin: 0;
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        
+        .save-btn, .load-select {
+            background: #37352f;
+            border: 1px solid #9b9a97;
+            color: #e9e9e7;
+            padding: 6px 12px;
             border-radius: 4px;
             font-size: 12px;
-            font-weight: 600;
             cursor: pointer;
         }
         
-        .add-btn:hover {
-            background: #004499;
+        .save-btn:hover {
+            background: #2f3437;
+            border-color: #0061cc;
+        }
+        
+        .load-select {
+            min-width: 150px;
+        }
+        
+        .tabs {
+            display: flex;
+            background: #37352f;
+            border-bottom: 1px solid #37352f;
+        }
+        
+        .tab {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            color: #9b9a97;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            border-bottom: 2px solid transparent;
+        }
+        
+        .tab.active {
+            color: #ffffff;
+            border-bottom-color: #0061cc;
+        }
+        
+        .tab:hover {
+            background: #2f3437;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
         }
         
         .section {
@@ -59,7 +112,6 @@
             border-radius: 6px;
             padding: 16px;
             margin-bottom: 16px;
-            position: relative;
         }
         
         .pack-header {
@@ -154,7 +206,7 @@
             margin-top: 4px;
         }
         
-        .analyze-btn {
+        .btn {
             background: #0f7b6c;
             color: white;
             border: none;
@@ -166,8 +218,16 @@
             width: 100%;
         }
         
-        .analyze-btn:hover {
+        .btn:hover {
             background: #0d6559;
+        }
+        
+        .btn-secondary {
+            background: #0061cc;
+        }
+        
+        .btn-secondary:hover {
+            background: #004499;
         }
         
         .comparison {
@@ -233,75 +293,351 @@
         .hidden {
             display: none;
         }
+        
+        .upload-area {
+            background: #37352f;
+            border: 2px dashed #9b9a97;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .upload-area:hover {
+            border-color: #0061cc;
+            background: #2f3437;
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+        
+        .upload-text {
+            color: #e9e9e7;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        
+        .upload-subtext {
+            color: #9b9a97;
+            font-size: 12px;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .chart-container {
+            background: #37352f;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .chart-canvas {
+            height: 300px !important;
+            max-height: 300px;
+        }
+        
+        .stat-card {
+            background: #37352f;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            color: #9b9a97;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 8px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+        
+        .top-template-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #2f3437;
+            font-size: 12px;
+        }
+        
+        .top-template-item:last-child {
+            border-bottom: none;
+        }
+        
+        .top-template-rank {
+            font-weight: 600;
+            color: #9b9a97;
+            margin-right: 12px;
+        }
+        
+        .top-template-name {
+            flex: 1;
+            color: #e9e9e7;
+        }
+        
+        .top-template-value {
+            font-weight: 600;
+            color: #ffffff;
+        }
+        
+        .rank-1 .top-template-rank { color: #0f7b6c; }
+        .rank-2 .top-template-rank { color: #d97706; }
+        .rank-3 .top-template-rank { color: #9065b0; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <span style="color: #9b9a97; font-size: 12px;">Pack Performance Analyzer</span>
-            <button class="add-btn" onclick="addPack()">+ Add Pack</button>
+            <h1>Pack Performance Analyzer</h1>
+            <div class="header-controls">
+                <button class="save-btn" onclick="saveAnalysis()">💾 Save Analysis</button>
+                <select class="load-select" onchange="loadAnalysis(this.value)">
+                    <option value="">Load Saved Analysis...</option>
+                </select>
+            </div>
         </div>
         
-        <div class="section" id="packs-section">
-            <div class="pack" id="pack-1">
-                <div class="pack-header">
-                    <input type="text" class="name-input" id="name1" placeholder="Pack 1 Name">
-                    <span style="display: none;"></span>
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('pack-comparison')">Pack Comparison</button>
+            <button class="tab" onclick="switchTab('time-series')">Template Usage Over Time</button>
+        </div>
+        
+        <!-- Pack Comparison Tab -->
+        <div id="pack-comparison" class="tab-content active">
+            <div class="section" id="packs-section">
+                <div class="pack" id="pack-1">
+                    <div class="pack-header">
+                        <input type="text" class="name-input" id="name1" placeholder="Pack 1 Name">
+                        <span style="display: none;"></span>
+                    </div>
+                    <div class="inputs">
+                        <div class="input-box">
+                            <label>Unique Users</label>
+                            <input type="number" id="users1" onchange="calc(1)">
+                        </div>
+                        <div class="input-box">
+                            <label>Unique Projects</label>
+                            <input type="number" id="projects1" onchange="calc(1)">
+                        </div>
+                        <div class="input-box">
+                            <label>Total App Users</label>
+                            <input type="number" id="total1" onchange="calc(1)">
+                        </div>
+                        <div class="input-box">
+                            <label>Banner Clicks</label>
+                            <input type="number" id="banner1" onchange="calc(1)">
+                        </div>
+                    </div>
+                    <div class="results">
+                        <div class="result">
+                            <div class="result-label">% All Users Used Pack</div>
+                            <div class="result-value" id="usage1">-</div>
+                        </div>
+                        <div class="result">
+                            <div class="result-label">% Users via Banner</div>
+                            <div class="result-value" id="bannerPct1">-</div>
+                        </div>
+                        <div class="result">
+                            <div class="result-label">Projects per User</div>
+                            <div class="result-value" id="ppu1">-</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="inputs">
-                    <div class="input-box">
-                        <label>Unique Users</label>
-                        <input type="number" id="users1" onchange="calc(1)">
-                    </div>
-                    <div class="input-box">
-                        <label>Unique Projects</label>
-                        <input type="number" id="projects1" onchange="calc(1)">
-                    </div>
-                    <div class="input-box">
-                        <label>Total App Users</label>
-                        <input type="number" id="total1" onchange="calc(1)">
-                    </div>
-                    <div class="input-box">
-                        <label>Banner Clicks</label>
-                        <input type="number" id="banner1" onchange="calc(1)">
-                    </div>
-                </div>
-                <div class="results">
-                    <div class="result">
-                        <div class="result-label">% All Users Used Pack</div>
-                        <div class="result-value" id="usage1">-</div>
-                    </div>
-                    <div class="result">
-                        <div class="result-label">% Users via Banner</div>
-                        <div class="result-value" id="bannerPct1">-</div>
-                    </div>
-                    <div class="result">
-                        <div class="result-label">Projects per User</div>
-                        <div class="result-value" id="ppu1">-</div>
-                    </div>
+            </div>
+            
+            <div class="section">
+                <button class="btn btn-secondary" onclick="addPack()" style="margin-bottom: 12px;">+ Add Pack</button>
+                <button class="btn hidden" id="compare-btn" onclick="analyze()">Compare All Packs</button>
+            </div>
+            
+            <div class="section comparison" id="comparison">
+                <div id="rankings"></div>
+                <div class="insights" id="insights">
+                    <h4>Key Insights</h4>
+                    <div id="insightsList"></div>
                 </div>
             </div>
         </div>
         
-        <div class="section hidden" id="compare-section">
-            <button class="analyze-btn" onclick="analyze()">Compare All Packs</button>
-        </div>
-        
-        <div class="section comparison" id="comparison">
-            <div id="rankings"></div>
-            <div class="insights" id="insights">
-                <h4>Key Insights</h4>
-                <div id="insightsList"></div>
+        <!-- Time Series Tab -->
+        <div id="time-series" class="tab-content">
+            <div class="section">
+                <div class="upload-area" onclick="document.getElementById('csv-upload').click()">
+                    <div class="upload-icon">📊</div>
+                    <div class="upload-text">Click to upload CSV file</div>
+                    <div class="upload-subtext">Expected format: action_date, template, Num Unique Projects</div>
+                </div>
+                <input type="file" id="csv-upload" class="file-input" accept=".csv" onchange="handleFileUpload(event)">
+            </div>
+            
+            <div id="time-results" class="hidden">
+                <div class="section">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Templates</div>
+                        <div class="stat-value" id="total-templates">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Projects</div>
+                        <div class="stat-value" id="total-projects">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Date Range</div>
+                        <div class="stat-value" id="date-range" style="font-size: 16px;">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Average Daily Projects</div>
+                        <div class="stat-value" id="avg-daily" style="font-size: 18px;">-</div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="insights">
+                        <h4>Top 5 Performing Templates</h4>
+                        <div id="top-templates-list"></div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="chart-container">
+                        <h4 style="color: #ffffff; margin-bottom: 16px;">Template Usage Over Time (Top 10)</h4>
+                        <canvas id="timeChart" class="chart-canvas"></canvas>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="insights">
+                        <h4>Key Insights</h4>
+                        <div id="time-insights"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
         var packCount = 1;
+        var myChart = null;
+        
+        // Load saved analyses on page load
+        window.onload = function() {
+            updateSavedAnalysesList();
+        };
+        
+        function saveAnalysis() {
+            var name = prompt('Enter a name for this analysis:');
+            if (!name) return;
+            
+            var data = {
+                packs: [],
+                timestamp: new Date().toISOString()
+            };
+            
+            document.querySelectorAll('.pack').forEach(function(packEl) {
+                var id = packEl.id.replace('pack-', '');
+                data.packs.push({
+                    name: document.getElementById('name' + id).value,
+                    users: document.getElementById('users' + id).value,
+                    projects: document.getElementById('projects' + id).value,
+                    total: document.getElementById('total' + id).value,
+                    banner: document.getElementById('banner' + id).value
+                });
+            });
+            
+            var saved = JSON.parse(localStorage.getItem('packAnalyses') || '{}');
+            saved[name] = data;
+            localStorage.setItem('packAnalyses', JSON.stringify(saved));
+            
+            updateSavedAnalysesList();
+            alert('Analysis saved as: ' + name);
+        }
+        
+        function loadAnalysis(name) {
+            if (!name) return;
+            
+            var saved = JSON.parse(localStorage.getItem('packAnalyses') || '{}');
+            var data = saved[name];
+            if (!data) return;
+            
+            // Clear existing packs
+            document.getElementById('packs-section').innerHTML = '';
+            packCount = 0;
+            
+            // Load saved packs
+            data.packs.forEach(function(pack, index) {
+                if (index === 0) {
+                    packCount = 1;
+                    var html = '<div class="pack" id="pack-1">' +
+                        '<div class="pack-header"><input type="text" class="name-input" id="name1" placeholder="Pack 1 Name" value="' + (pack.name || '') + '"><span style="display: none;"></span></div>' +
+                        '<div class="inputs">' +
+                        '<div class="input-box"><label>Unique Users</label><input type="number" id="users1" value="' + (pack.users || '') + '" onchange="calc(1)"></div>' +
+                        '<div class="input-box"><label>Unique Projects</label><input type="number" id="projects1" value="' + (pack.projects || '') + '" onchange="calc(1)"></div>' +
+                        '<div class="input-box"><label>Total App Users</label><input type="number" id="total1" value="' + (pack.total || '') + '" onchange="calc(1)"></div>' +
+                        '<div class="input-box"><label>Banner Clicks</label><input type="number" id="banner1" value="' + (pack.banner || '') + '" onchange="calc(1)"></div>' +
+                        '</div>' +
+                        '<div class="results">' +
+                        '<div class="result"><div class="result-label">% All Users Used Pack</div><div class="result-value" id="usage1">-</div></div>' +
+                        '<div class="result"><div class="result-label">% Users via Banner</div><div class="result-value" id="bannerPct1">-</div></div>' +
+                        '<div class="result"><div class="result-label">Projects per User</div><div class="result-value" id="ppu1">-</div></div>' +
+                        '</div></div>';
+                    document.getElementById('packs-section').innerHTML = html;
+                    calc(1);
+                } else {
+                    addPack();
+                    var id = packCount;
+                    document.getElementById('name' + id).value = pack.name || '';
+                    document.getElementById('users' + id).value = pack.users || '';
+                    document.getElementById('projects' + id).value = pack.projects || '';
+                    document.getElementById('total' + id).value = pack.total || '';
+                    document.getElementById('banner' + id).value = pack.banner || '';
+                    calc(id);
+                }
+            });
+            
+            // Reset dropdown
+            document.querySelector('.load-select').value = '';
+        }
+        
+        function updateSavedAnalysesList() {
+            var saved = JSON.parse(localStorage.getItem('packAnalyses') || '{}');
+            var select = document.querySelector('.load-select');
+            
+            // Keep the first option
+            select.innerHTML = '<option value="">Load Saved Analysis...</option>';
+            
+            Object.keys(saved).forEach(function(name) {
+                var date = new Date(saved[name].timestamp).toLocaleDateString();
+                var option = document.createElement('option');
+                option.value = name;
+                option.textContent = name + ' (' + date + ')';
+                select.appendChild(option);
+            });
+        }
+        
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(function(content) {
+                content.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(function(tab) {
+                tab.classList.remove('active');
+            });
+            
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
         
         function addPack() {
             packCount++;
-            
             var packsSection = document.getElementById('packs-section');
             var newPack = document.createElement('div');
             newPack.className = 'pack';
@@ -313,36 +649,15 @@
                     '<button class="remove-btn" onclick="removePack(' + packCount + ')">×</button>' +
                 '</div>' +
                 '<div class="inputs">' +
-                    '<div class="input-box">' +
-                        '<label>Unique Users</label>' +
-                        '<input type="number" id="users' + packCount + '" onchange="calc(' + packCount + ')">' +
-                    '</div>' +
-                    '<div class="input-box">' +
-                        '<label>Unique Projects</label>' +
-                        '<input type="number" id="projects' + packCount + '" onchange="calc(' + packCount + ')">' +
-                    '</div>' +
-                    '<div class="input-box">' +
-                        '<label>Total App Users</label>' +
-                        '<input type="number" id="total' + packCount + '" onchange="calc(' + packCount + ')">' +
-                    '</div>' +
-                    '<div class="input-box">' +
-                        '<label>Banner Clicks</label>' +
-                        '<input type="number" id="banner' + packCount + '" onchange="calc(' + packCount + ')">' +
-                    '</div>' +
+                    '<div class="input-box"><label>Unique Users</label><input type="number" id="users' + packCount + '" onchange="calc(' + packCount + ')"></div>' +
+                    '<div class="input-box"><label>Unique Projects</label><input type="number" id="projects' + packCount + '" onchange="calc(' + packCount + ')"></div>' +
+                    '<div class="input-box"><label>Total App Users</label><input type="number" id="total' + packCount + '" onchange="calc(' + packCount + ')"></div>' +
+                    '<div class="input-box"><label>Banner Clicks</label><input type="number" id="banner' + packCount + '" onchange="calc(' + packCount + ')"></div>' +
                 '</div>' +
                 '<div class="results">' +
-                    '<div class="result">' +
-                        '<div class="result-label">% All Users Used Pack</div>' +
-                        '<div class="result-value" id="usage' + packCount + '">-</div>' +
-                    '</div>' +
-                    '<div class="result">' +
-                        '<div class="result-label">% Users via Banner</div>' +
-                        '<div class="result-value" id="bannerPct' + packCount + '">-</div>' +
-                    '</div>' +
-                    '<div class="result">' +
-                        '<div class="result-label">Projects per User</div>' +
-                        '<div class="result-value" id="ppu' + packCount + '">-</div>' +
-                    '</div>' +
+                    '<div class="result"><div class="result-label">% All Users Used Pack</div><div class="result-value" id="usage' + packCount + '">-</div></div>' +
+                    '<div class="result"><div class="result-label">% Users via Banner</div><div class="result-value" id="bannerPct' + packCount + '">-</div></div>' +
+                    '<div class="result"><div class="result-label">Projects per User</div><div class="result-value" id="ppu' + packCount + '">-</div></div>' +
                 '</div>';
             
             packsSection.appendChild(newPack);
@@ -350,23 +665,14 @@
         }
         
         function removePack(packNum) {
-            var packElement = document.getElementById('pack-' + packNum);
-            if (packElement) {
-                packElement.remove();
-            }
+            document.getElementById('pack-' + packNum).remove();
             updateCompareButton();
         }
         
         function updateCompareButton() {
             var packs = document.querySelectorAll('.pack');
-            var compareSection = document.getElementById('compare-section');
-            
-            if (packs.length > 1) {
-                compareSection.classList.remove('hidden');
-            } else {
-                compareSection.classList.add('hidden');
-                document.getElementById('comparison').className = 'comparison';
-            }
+            document.getElementById('compare-btn').classList.toggle('hidden', packs.length <= 1);
+            if (packs.length <= 1) document.getElementById('comparison').className = 'comparison';
         }
         
         function calc(packNum) {
@@ -375,40 +681,30 @@
             var total = parseInt(document.getElementById('total' + packNum).value) || 0;
             var banner = parseInt(document.getElementById('banner' + packNum).value) || 0;
             
-            var usage = total > 0 ? ((users / total) * 100).toFixed(2) : 0;
-            var bannerPct = users > 0 ? ((banner / users) * 100).toFixed(1) : 0;
-            var ppu = users > 0 ? (projects / users).toFixed(2) : 0;
-            
-            document.getElementById('usage' + packNum).textContent = usage + '%';
-            document.getElementById('bannerPct' + packNum).textContent = bannerPct + '%';
-            document.getElementById('ppu' + packNum).textContent = ppu;
+            document.getElementById('usage' + packNum).textContent = (total > 0 ? ((users / total) * 100).toFixed(2) : 0) + '%';
+            document.getElementById('bannerPct' + packNum).textContent = (users > 0 ? ((banner / users) * 100).toFixed(1) : 0) + '%';
+            document.getElementById('ppu' + packNum).textContent = users > 0 ? (projects / users).toFixed(2) : 0;
         }
         
         function analyze() {
             var packs = [];
-            var allPacks = document.querySelectorAll('.pack');
-            
-            for (var i = 0; i < allPacks.length; i++) {
-                var packId = allPacks[i].id.replace('pack-', '');
-                var users = parseInt(document.getElementById('users' + packId).value) || 0;
-                var projects = parseInt(document.getElementById('projects' + packId).value) || 0;
-                var total = parseInt(document.getElementById('total' + packId).value) || 0;
-                var banner = parseInt(document.getElementById('banner' + packId).value) || 0;
-                var name = document.getElementById('name' + packId).value || 'Pack ' + packId;
+            document.querySelectorAll('.pack').forEach(function(packEl) {
+                var id = packEl.id.replace('pack-', '');
+                var users = parseInt(document.getElementById('users' + id).value) || 0;
+                var projects = parseInt(document.getElementById('projects' + id).value) || 0;
+                var total = parseInt(document.getElementById('total' + id).value) || 0;
+                var banner = parseInt(document.getElementById('banner' + id).value) || 0;
+                var name = document.getElementById('name' + id).value || 'Pack ' + id;
                 
                 if (users > 0) {
-                    var usage = total > 0 ? (users / total) * 100 : 0;
-                    var bannerPct = users > 0 ? (banner / users) * 100 : 0;
-                    var ppu = projects / users;
-                    
                     packs.push({
                         name: name,
-                        usage: usage,
-                        bannerPct: bannerPct,
-                        ppu: ppu
+                        usage: total > 0 ? (users / total) * 100 : 0,
+                        bannerPct: users > 0 ? (banner / users) * 100 : 0,
+                        ppu: projects / users
                     });
                 }
-            }
+            });
             
             if (packs.length < 2) {
                 alert('Please enter data for at least 2 packs to compare');
@@ -423,56 +719,218 @@
             var ppuSort = packs.slice().sort(function(a, b) { return b.ppu - a.ppu; });
             var bannerSort = packs.slice().sort(function(a, b) { return b.bannerPct - a.bannerPct; });
             
-            var rankingsHtml = '<div class="ranking"><h4>% All Users Used Pack</h4>';
+            var html = '<div class="ranking"><h4>% All Users Used Pack</h4>';
             for (var i = 0; i < Math.min(3, usageSort.length); i++) {
-                rankingsHtml += '<div class="ranking-item"><span>' + usageSort[i].name + '</span><span>' + usageSort[i].usage.toFixed(2) + '%</span></div>';
+                html += '<div class="ranking-item"><span>' + usageSort[i].name + '</span><span>' + usageSort[i].usage.toFixed(2) + '%</span></div>';
             }
-            rankingsHtml += '</div>';
-            
-            rankingsHtml += '<div class="ranking"><h4>Projects per User</h4>';
+            html += '</div><div class="ranking"><h4>Projects per User</h4>';
             for (var i = 0; i < Math.min(3, ppuSort.length); i++) {
-                rankingsHtml += '<div class="ranking-item"><span>' + ppuSort[i].name + '</span><span>' + ppuSort[i].ppu.toFixed(2) + '</span></div>';
+                html += '<div class="ranking-item"><span>' + ppuSort[i].name + '</span><span>' + ppuSort[i].ppu.toFixed(2) + '</span></div>';
             }
-            rankingsHtml += '</div>';
-            
-            rankingsHtml += '<div class="ranking"><h4>% Users via Banner</h4>';
+            html += '</div><div class="ranking"><h4>% Users via Banner</h4>';
             for (var i = 0; i < Math.min(3, bannerSort.length); i++) {
-                rankingsHtml += '<div class="ranking-item"><span>' + bannerSort[i].name + '</span><span>' + bannerSort[i].bannerPct.toFixed(1) + '%</span></div>';
+                html += '<div class="ranking-item"><span>' + bannerSort[i].name + '</span><span>' + bannerSort[i].bannerPct.toFixed(1) + '%</span></div>';
             }
-            rankingsHtml += '</div>';
+            html += '</div>';
             
-            document.getElementById('rankings').innerHTML = rankingsHtml;
+            document.getElementById('rankings').innerHTML = html;
             
             var insights = [];
-            
             insights.push('success|' + usageSort[0].name + ' leads adoption with ' + usageSort[0].usage.toFixed(2) + '% of all users');
-            
             if (usageSort[0].name !== ppuSort[0].name) {
-                insights.push('info|' + ppuSort[0].name + ' has highest engagement (' + ppuSort[0].ppu.toFixed(2) + ' projects/user) but lower adoption than ' + usageSort[0].name);
+                insights.push('info|' + ppuSort[0].name + ' has highest engagement (' + ppuSort[0].ppu.toFixed(2) + ' projects/user) but lower adoption');
             }
-            
             if (bannerSort[0].bannerPct > 50) {
-                insights.push('success|' + bannerSort[0].name + ' has excellent banner discovery (' + bannerSort[0].bannerPct.toFixed(1) + '% via banner)');
+                insights.push('success|' + bannerSort[0].name + ' has excellent banner discovery (' + bannerSort[0].bannerPct.toFixed(1) + '%)');
             }
             
-            var gap = usageSort[0].usage - usageSort[usageSort.length - 1].usage;
-            if (gap > 1) {
-                insights.push('warning|' + gap.toFixed(2) + '% adoption gap between best and worst packs indicates optimization opportunity');
-            }
-            
-            var bannerGap = bannerSort[0].bannerPct - bannerSort[bannerSort.length - 1].bannerPct;
-            if (bannerGap > 30) {
-                insights.push('info|Banner performance varies significantly (' + bannerGap.toFixed(1) + '% range) - apply best practices from top performers');
-            }
-            
-            var insightsHtml = '';
-            for (var i = 0; i < insights.length; i++) {
-                var parts = insights[i].split('|');
-                insightsHtml += '<div class="insight ' + parts[0] + '">' + parts[1] + '</div>';
-            }
+            var insightsHtml = insights.map(function(i) {
+                var p = i.split('|');
+                return '<div class="insight ' + p[0] + '">' + p[1] + '</div>';
+            }).join('');
             
             document.getElementById('insightsList').innerHTML = insightsHtml;
             document.getElementById('comparison').className = 'comparison show';
+        }
+        
+        function handleFileUpload(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            
+            var reader = new FileReader();
+            reader.onload = function(event) {
+                parseCSV(event.target.result);
+            };
+            reader.readAsText(file);
+        }
+        
+        function parseCSV(csv) {
+            var lines = csv.split('\n');
+            var data = {};
+            var allDates = [];
+            
+            for (var i = 1; i < lines.length; i++) {
+                var line = lines[i].trim();
+                if (!line) continue;
+                
+                var parts = [];
+                var current = '';
+                var inQuotes = false;
+                
+                for (var j = 0; j < line.length; j++) {
+                    var char = line[j];
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        parts.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                parts.push(current.trim());
+                
+                if (parts.length < 3) continue;
+                
+                var date = parts[0].replace(/"/g, '').trim();
+                var template = parts[1].replace(/"/g, '').trim();
+                var projects = parseInt(parts[2]) || 0;
+                
+                if (!template || !date) continue;
+                
+                if (!data[template]) data[template] = {};
+                data[template][date] = (data[template][date] || 0) + projects;
+                
+                if (allDates.indexOf(date) === -1) allDates.push(date);
+            }
+            
+            allDates.sort();
+            analyzeData(data, allDates);
+        }
+        
+        function analyzeData(data, dates) {
+            var templates = Object.keys(data);
+            var totals = [];
+            var grandTotal = 0;
+            
+            for (var i = 0; i < templates.length; i++) {
+                var template = templates[i];
+                var total = 0;
+                for (var j = 0; j < dates.length; j++) {
+                    total += data[template][dates[j]] || 0;
+                }
+                totals.push({ template: template, total: total });
+                grandTotal += total;
+            }
+            
+            totals.sort(function(a, b) { return b.total - a.total; });
+            
+            document.getElementById('total-templates').textContent = templates.length;
+            document.getElementById('total-projects').textContent = grandTotal.toLocaleString();
+            document.getElementById('date-range').textContent = dates[0] + ' to ' + dates[dates.length - 1];
+            document.getElementById('avg-daily').textContent = (grandTotal / dates.length).toFixed(0);
+            
+            var top5Html = '';
+            for (var i = 0; i < Math.min(5, totals.length); i++) {
+                var percent = (totals[i].total / grandTotal * 100).toFixed(1);
+                top5Html += '<div class="top-template-item rank-' + (i+1) + '">' +
+                    '<span class="top-template-rank">#' + (i+1) + '</span>' +
+                    '<span class="top-template-name">' + totals[i].template + '</span>' +
+                    '<span class="top-template-value">' + totals[i].total.toLocaleString() + ' (' + percent + '%)</span></div>';
+            }
+            document.getElementById('top-templates-list').innerHTML = top5Html;
+            
+            createChart(data, dates, totals);
+            generateInsights(data, dates, totals, grandTotal);
+            document.getElementById('time-results').classList.remove('hidden');
+        }
+        
+        function createChart(data, dates, totals) {
+            var ctx = document.getElementById('timeChart');
+            if (myChart) myChart.destroy();
+            
+            var displayDates = dates;
+            if (dates.length > 15) {
+                var skip = Math.ceil(dates.length / 15);
+                displayDates = dates.filter(function(d, i) { return i % skip === 0 || i === dates.length - 1; });
+            }
+            
+            var colors = ['#0061cc', '#0f7b6c', '#d9730d', '#9065b0', '#e03e3e', '#0d9488', '#7c3aed', '#db2777', '#ea580c', '#0891b2'];
+            var datasets = [];
+            
+            for (var i = 0; i < Math.min(10, totals.length); i++) {
+                var template = totals[i].template;
+                var values = displayDates.map(function(d) { return data[template][d] || 0; });
+                
+                datasets.push({
+                    label: template.substring(0, 25),
+                    data: values,
+                    borderColor: colors[i],
+                    backgroundColor: colors[i] + '20',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: false,
+                    pointRadius: 2,
+                    pointHoverRadius: 4
+                });
+            }
+            
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: { labels: displayDates, datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2.5,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#e9e9e7', font: { size: 10 }, boxWidth: 12, padding: 8 }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#9b9a97', maxRotation: 45, font: { size: 9 } }, grid: { color: '#37352f' } },
+                        y: { ticks: { color: '#9b9a97', font: { size: 10 } }, grid: { color: '#37352f' } }
+                    }
+                }
+            });
+        }
+        
+        function generateInsights(data, dates, totals, grandTotal) {
+            var insights = [];
+            var top = totals[0];
+            insights.push('success|' + top.template + ' is the winner with ' + top.total.toLocaleString() + ' projects (' + (top.total / grandTotal * 100).toFixed(1) + '%)');
+            
+            var firstTotal = 0, lastTotal = 0;
+            totals.forEach(function(t) {
+                firstTotal += data[t.template][dates[0]] || 0;
+                lastTotal += data[t.template][dates[dates.length - 1]] || 0;
+            });
+            
+            var growth = ((lastTotal - firstTotal) / firstTotal * 100).toFixed(1);
+            if (growth > 0) {
+                insights.push('success|Overall growth of ' + growth + '% from ' + dates[0] + ' to ' + dates[dates.length - 1]);
+            } else {
+                insights.push('warning|Overall decline of ' + Math.abs(growth) + '% from ' + dates[0] + ' to ' + dates[dates.length - 1]);
+            }
+            
+            var top5Total = 0;
+            for (var i = 0; i < Math.min(5, totals.length); i++) {
+                top5Total += totals[i].total;
+            }
+            var top5Pct = (top5Total / grandTotal * 100).toFixed(1);
+            insights.push('info|Top 5 templates account for ' + top5Pct + '% of all projects');
+            
+            if (totals.length > 20) {
+                insights.push('warning|You have ' + totals.length + ' templates - consider focusing on top performers');
+            }
+            
+            var html = insights.map(function(i) {
+                var p = i.split('|');
+                return '<div class="insight ' + p[0] + '">' + p[1] + '</div>';
+            }).join('');
+            
+            document.getElementById('time-insights').innerHTML = html;
         }
     </script>
 </body>
