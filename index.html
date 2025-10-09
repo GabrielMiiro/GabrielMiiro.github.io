@@ -499,12 +499,27 @@
                         <div class="stat-label">Average Daily Projects</div>
                         <div class="stat-value" id="avg-daily" style="font-size: 18px;">-</div>
                     </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Peak Day</div>
+                        <div class="stat-value" id="peak-day" style="font-size: 14px;">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Lowest Day (excl. first)</div>
+                        <div class="stat-value" id="worst-day" style="font-size: 14px;">-</div>
+                    </div>
                 </div>
                 
                 <div class="section">
                     <div class="insights">
-                        <h4>Top 5 Performing Templates</h4>
+                        <h4>Top 5 Performing Templates (Overall)</h4>
                         <div id="top-templates-list"></div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="insights">
+                        <h4>Templates That Reached Daily Top 5</h4>
+                        <div id="ever-top5-list"></div>
                     </div>
                 </div>
                 
@@ -812,12 +827,18 @@
             var templates = Object.keys(data);
             var totals = [];
             var grandTotal = 0;
+            var dailyTotals = {};
+            var everTop5 = {};
             
+            // Calculate totals and daily totals
             for (var i = 0; i < templates.length; i++) {
                 var template = templates[i];
                 var total = 0;
                 for (var j = 0; j < dates.length; j++) {
-                    total += data[template][dates[j]] || 0;
+                    var date = dates[j];
+                    var projectCount = data[template][date] || 0;
+                    total += projectCount;
+                    dailyTotals[date] = (dailyTotals[date] || 0) + projectCount;
                 }
                 totals.push({ template: template, total: total });
                 grandTotal += total;
@@ -825,11 +846,47 @@
             
             totals.sort(function(a, b) { return b.total - a.total; });
             
+            // Track which templates were in daily top 5
+            dates.forEach(function(date) {
+                var dayRankings = templates.map(function(t) {
+                    return { template: t, count: data[t][date] || 0 };
+                }).sort(function(a, b) { return b.count - a.count; });
+                
+                for (var i = 0; i < Math.min(5, dayRankings.length); i++) {
+                    var template = dayRankings[i].template;
+                    if (!everTop5[template]) {
+                        everTop5[template] = { count: 0, dates: [] };
+                    }
+                    everTop5[template].count++;
+                    everTop5[template].dates.push(date);
+                }
+            });
+            
+            // Find peak and worst days
+            var peakDay = dates[0];
+            var peakProjects = dailyTotals[dates[0]];
+            var worstDay = dates[1];
+            var worstProjects = dailyTotals[dates[1]];
+            
+            for (var i = 0; i < dates.length; i++) {
+                if (dailyTotals[dates[i]] > peakProjects) {
+                    peakDay = dates[i];
+                    peakProjects = dailyTotals[dates[i]];
+                }
+                if (i > 0 && dailyTotals[dates[i]] < worstProjects) {
+                    worstDay = dates[i];
+                    worstProjects = dailyTotals[dates[i]];
+                }
+            }
+            
             document.getElementById('total-templates').textContent = templates.length;
             document.getElementById('total-projects').textContent = grandTotal.toLocaleString();
             document.getElementById('date-range').textContent = dates[0] + ' to ' + dates[dates.length - 1];
             document.getElementById('avg-daily').textContent = (grandTotal / dates.length).toFixed(0);
+            document.getElementById('peak-day').textContent = peakDay + ' (' + peakProjects.toLocaleString() + ')';
+            document.getElementById('worst-day').textContent = worstDay + ' (' + worstProjects.toLocaleString() + ')';
             
+            // Overall top 5
             var top5Html = '';
             for (var i = 0; i < Math.min(5, totals.length); i++) {
                 var percent = (totals[i].total / grandTotal * 100).toFixed(1);
@@ -840,8 +897,22 @@
             }
             document.getElementById('top-templates-list').innerHTML = top5Html;
             
+            // Ever in top 5
+            var everTop5Array = Object.keys(everTop5).map(function(t) {
+                return { template: t, daysInTop5: everTop5[t].count, dates: everTop5[t].dates };
+            }).sort(function(a, b) { return b.daysInTop5 - a.daysInTop5; });
+            
+            var everTop5Html = '';
+            everTop5Array.forEach(function(item, i) {
+                var consistency = (item.daysInTop5 / dates.length * 100).toFixed(0);
+                everTop5Html += '<div class="top-template-item">' +
+                    '<span class="top-template-name">' + item.template + '</span>' +
+                    '<span class="top-template-value">' + item.daysInTop5 + ' days (' + consistency + '%)</span></div>';
+            });
+            document.getElementById('ever-top5-list').innerHTML = everTop5Html || '<div style="color: #9b9a97; font-size: 12px;">No data</div>';
+            
             createChart(data, dates, totals);
-            generateInsights(data, dates, totals, grandTotal);
+            generateInsights(data, dates, totals, grandTotal, dailyTotals, peakDay, worstDay, everTop5Array);
             document.getElementById('time-results').classList.remove('hidden');
         }
         
@@ -896,41 +967,121 @@
             });
         }
         
-        function generateInsights(data, dates, totals, grandTotal) {
+        function generateInsights(data, dates, totals, grandTotal, dailyTotals, peakDay, worstDay, everTop5Array) {
             var insights = [];
             var top = totals[0];
-            insights.push('success|' + top.template + ' is the winner with ' + top.total.toLocaleString() + ' projects (' + (top.total / grandTotal * 100).toFixed(1) + '%)');
+            insights.push('success|' + top.template + ' dominates with ' + top.total.toLocaleString() + ' projects (' + (top.total / grandTotal * 100).toFixed(1) + '% of total)');
             
-            var firstTotal = 0, lastTotal = 0;
-            totals.forEach(function(t) {
-                firstTotal += data[t.template][dates[0]] || 0;
-                lastTotal += data[t.template][dates[dates.length - 1]] || 0;
+            // Top 5 consistency analysis
+            var consistentTop5 = everTop5Array.filter(function(t) { return t.daysInTop5 >= dates.length * 0.8; });
+            var volatileTop5 = everTop5Array.filter(function(t) { return t.daysInTop5 < dates.length * 0.3 && t.daysInTop5 > 0; });
+            
+            if (consistentTop5.length > 0) {
+                insights.push('success|' + consistentTop5.length + ' template(s) maintained top 5 position on 80%+ of days - strong consistent performers');
+            }
+            
+            if (volatileTop5.length > 3) {
+                insights.push('warning|' + volatileTop5.length + ' templates appeared in top 5 briefly then dropped off - high volatility in performance');
+            }
+            
+            if (everTop5Array.length > 8) {
+                insights.push('info|' + everTop5Array.length + ' different templates reached top 5 at some point - diverse performance across portfolio');
+            } else if (everTop5Array.length <= 5) {
+                insights.push('warning|Only ' + everTop5Array.length + ' templates ever reached top 5 - limited variety in top performers');
+            }
+            
+            // Growth analysis
+            var firstTotal = dailyTotals[dates[0]];
+            var lastTotal = dailyTotals[dates[dates.length - 1]];
+            var growth = ((lastTotal - firstTotal) / firstTotal * 100).toFixed(1);
+            
+            if (growth > 0) {
+                insights.push('success|Overall growth of ' + growth + '% from first to last day');
+            } else if (growth < 0) {
+                insights.push('warning|Overall decline of ' + Math.abs(growth) + '% from first to last day');
+            }
+            
+            // Peak analysis
+            var peakProjects = dailyTotals[peakDay];
+            var peakVsAvg = ((peakProjects / (grandTotal / dates.length)) - 1) * 100;
+            if (peakVsAvg > 20) {
+                insights.push('info|' + peakDay + ' peak was ' + peakVsAvg.toFixed(0) + '% above average - investigate what drove this spike');
+            }
+            
+            // Volatility measure
+            var dailyValues = dates.map(function(d) { return dailyTotals[d]; });
+            var avg = grandTotal / dates.length;
+            var variance = dailyValues.reduce(function(sum, val) { return sum + Math.pow(val - avg, 2); }, 0) / dates.length;
+            var stdDev = Math.sqrt(variance);
+            var coefficientOfVariation = (stdDev / avg * 100).toFixed(0);
+            
+            if (coefficientOfVariation > 25) {
+                insights.push('warning|High daily volatility (CV: ' + coefficientOfVariation + '%) - usage patterns are unpredictable');
+            } else if (coefficientOfVariation < 15) {
+                insights.push('success|Low daily volatility (CV: ' + coefficientOfVariation + '%) - stable, predictable usage patterns');
+            }
+            
+            // Weekday patterns
+            var weekdayTotals = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0};
+            var weekdayCounts = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0};
+            
+            dates.forEach(function(date) {
+                var d = new Date(date);
+                var day = d.getDay();
+                weekdayTotals[day] += dailyTotals[date];
+                weekdayCounts[day]++;
             });
             
-            var growth = ((lastTotal - firstTotal) / firstTotal * 100).toFixed(1);
-            if (growth > 0) {
-                insights.push('success|Overall growth of ' + growth + '% from ' + dates[0] + ' to ' + dates[dates.length - 1]);
-            } else {
-                insights.push('warning|Overall decline of ' + Math.abs(growth) + '% from ' + dates[0] + ' to ' + dates[dates.length - 1]);
+            var dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            var avgByDay = [];
+            for (var i = 0; i < 7; i++) {
+                if (weekdayCounts[i] > 0) {
+                    avgByDay.push({ day: dayNames[i], avg: weekdayTotals[i] / weekdayCounts[i], dayNum: i });
+                }
             }
             
-            var top5Total = 0;
-            for (var i = 0; i < Math.min(5, totals.length); i++) {
-                top5Total += totals[i].total;
+            if (avgByDay.length >= 5) {
+                avgByDay.sort(function(a, b) { return b.avg - a.avg; });
+                var bestDay = avgByDay[0];
+                var worstWeekday = avgByDay[avgByDay.length - 1];
+                var dayDiff = ((bestDay.avg - worstWeekday.avg) / worstWeekday.avg * 100).toFixed(0);
+                
+                if (dayDiff > 15) {
+                    insights.push('info|' + bestDay.day + 's perform ' + dayDiff + '% better than ' + worstWeekday.day + 's - consider timing releases accordingly');
+                }
             }
+            
+            // Trend analysis
+            var midpoint = Math.floor(dates.length / 2);
+            var firstHalfTotal = 0, secondHalfTotal = 0;
+            
+            for (var i = 0; i < midpoint; i++) firstHalfTotal += dailyTotals[dates[i]];
+            for (var i = midpoint; i < dates.length; i++) secondHalfTotal += dailyTotals[dates[i]];
+            
+            var trendChange = ((secondHalfTotal / (dates.length - midpoint)) - (firstHalfTotal / midpoint)) / (firstHalfTotal / midpoint) * 100;
+            
+            if (trendChange > 10) {
+                insights.push('success|Strong upward trend - second half averaging ' + trendChange.toFixed(1) + '% higher than first half');
+            } else if (trendChange < -10) {
+                insights.push('warning|Declining trend - second half averaging ' + Math.abs(trendChange).toFixed(1) + '% lower than first half');
+            }
+            
+            // Concentration analysis
+            var top5Total = totals.slice(0, 5).reduce(function(sum, t) { return sum + t.total; }, 0);
             var top5Pct = (top5Total / grandTotal * 100).toFixed(1);
-            insights.push('info|Top 5 templates account for ' + top5Pct + '% of all projects');
             
-            if (totals.length > 20) {
-                insights.push('warning|You have ' + totals.length + ' templates - consider focusing on top performers');
+            if (top5Pct > 80) {
+                insights.push('warning|Top 5 dominate with ' + top5Pct + '% of projects - portfolio heavily concentrated');
+            } else if (top5Pct < 50) {
+                insights.push('success|Well-distributed portfolio - top 5 only account for ' + top5Pct + '% of projects');
+            } else {
+                insights.push('info|Top 5 templates account for ' + top5Pct + '% of all projects');
             }
             
-            var html = insights.map(function(i) {
+            document.getElementById('time-insights').innerHTML = insights.map(function(i) {
                 var p = i.split('|');
                 return '<div class="insight ' + p[0] + '">' + p[1] + '</div>';
             }).join('');
-            
-            document.getElementById('time-insights').innerHTML = html;
         }
     </script>
 </body>
